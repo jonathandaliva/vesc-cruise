@@ -1,36 +1,42 @@
-(define duty 0) ;-1-0-1 used for setting the dutycycle
-(define dutytoset 0) ;-1-0-1 used for setting the dutycycle
+(define currenttoset 0) ;-1-0-1 used for setting the throttle
 (define throttle 0) ;0-1 thumbthrottle value
 (define throttleReleased 0) ;used to indicate throttle has been released after pressing cruise
-(define brake 0) ;0-1 Brake input
-(define cruise 1) ;1-0 cruise control input
-(define cruiseMode 0) ;0 do nothing - 1 cruising
-(define cruisetimer 101) ;used to count how long it's been since cruise was disabled
+(define cruise 1) ;1-0 cruise control input.  1 means button is not pressed.
+(define cruiseMode 0) ;0 check if cruising should start - 1 start cruising, keep cruising, or stop cruising
+(define cruisetimer 101) ;used to count how long it's been since cruise was disabled.  Don't allow a bunch of accidental clicks to keep enabling cruise.
 (define cruiseReleased 0) ;used to indicate cruise button has been released after pressing
 
 ;Fixed variables
-(define cruisecooldown 100) ;1 seconds
+(define cruisecooldown 100) ;1 second
 
 (defun stopCruise ()
     (progn
 		(print "stopping Cruise")
 		(setvar 'cruiseMode 0)
 		(setvar 'cruisetimer 0)
-		(setvar 'dutytoset 0)
-		(set-duty 0)
+		(setvar 'currenttoset 0)
+		(set-current 0)
+	)
+)
+
+(defun startCruise ()
+    (progn
+		(print "enabling cruiseMode")
+		(setvar 'currenttoset (get-duty))
+		(setvar 'cruiseMode 1)
+		(setvar 'cruiseReleased 0)
+		(setvar 'throttleReleased 0)
 	)
 )
 
 (loopwhile t
 	(progn
 		(setvar 'throttle (get-adc-decoded 0))
-		(setvar 'brake (get-adc-decoded 1))
-		(setvar 'cruise (gpio-read 'pin-tx)) ;Returns 1 if the pin is high, 0 otherwise.
-		(setvar 'duty (get-duty)) ;Get current speed of motor
+		(setvar 'cruise (gpio-read 'pin-tx)) ;Returns 1 if the pin is high, 0 otherwise. 0 is cruise control button is pressed
 		;If cruising for first time, enable crusing, else see if brake, throttle, or cruise have been touched and stop cruising
 		(if (= cruiseMode 1)
 			(progn
-				(if (> brake 0) ;Brake has been pressed.	Stop cruising
+				(if (> (get-adc-decoded 1) 0) ;Brake has been pressed. Stop cruising
 					(stopCruise)
 				)
 				(if (= cruiseReleased 1)
@@ -45,21 +51,15 @@
 				)
 				(if (= cruiseReleased 0)
 					(if (= cruise 1) ;Cruise has been released - indicate as such
-						(progn
-							(print "cruise released")
-							(setvar 'cruiseReleased 1)
-						)
+						(setvar 'cruiseReleased 1)
 					)
 				)
 				(if (= throttleReleased 0) ;If throttle has not been indicated released, check
 					(if (= throttle 0) ;Throttle has been released - indicate as such
-						(progn
-							(print "throttle released")
-							(setvar 'throttleReleased 1)
-						)
+						(setvar 'throttleReleased 1)
 					)
 				)
-				(set-duty dutytoset)
+				(set-current-rel currenttoset 0.015)
 			)
 		)
 
@@ -77,13 +77,7 @@
 							(progn
 								(print "in throttle > 0 IF")
 								(if (> cruisetimer cruisecooldown) ;Its been at least X seconds since cruise was last disabled
-									(progn
-										(print "enabling cruiseMode")
-										(setvar 'dutytoset duty)
-										(setvar 'cruiseMode 1)
-										(setvar 'cruiseReleased 0)
-										(setvar 'throttleReleased 0)
-									)
+									(startCruise)
 								)
 							)
 						)
