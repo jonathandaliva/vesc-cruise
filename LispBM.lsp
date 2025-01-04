@@ -1,27 +1,28 @@
-(define currenttoset 0) ;-1-0-1 used for setting the throttle
-(define throttle 0) ;0-1 thumbthrottle value
-(define throttleReleased 0) ;used to indicate throttle has been released after pressing cruise
-(define cruise 1) ;1-0 cruise control input.  1 means button is not pressed.
-(define cruiseMode 0) ;0 check if cruising should start - 1 start cruising, keep cruising, or stop cruising
-(define cruisetimer 101) ;used to count how long it's been since cruise was disabled.  Don't allow a bunch of accidental clicks to keep enabling cruise.
-(define cruiseReleased 0) ;used to indicate cruise button has been released after pressing
-
+(def currenttoset 0) ;-1-0-1 used for setting the throttle
+(def throttle 0) ;0-1 thumbthrottle value
+(def throttleReleased 0) ;used to indicate throttle has been released after pressing cruise
+(def cruise 1) ;1-0 cruise control input. 1 means button is not pressed.
+(def cruiseMode 0) ;0 check if cruising should start - 1 start cruising, keep cruising, or stop cruising
+(def cruisetimer 101) ;used to count how long it's been since cruise was disabled. Don't allow a bunch of accidental clicks to keep enabling cruise.
+(def cruiseReleased 0) ;used to indicate cruise button has been released after pressing
+;(def maxMotorCurrent (conf-get 'l-current-max))
 ;Fixed variables
-(define cruisecooldown 100) ;1 second
+(def cruisecooldown 100) ;1 second
 
 (defun stopCruise ()
-    (progn
-		(print "stopping Cruise")
+	(progn
+		;(print "stopping Cruise")
 		(setvar 'cruiseMode 0)
 		(setvar 'cruisetimer 0)
 		(setvar 'currenttoset 0)
+		;(gpio-hold 'pin-tx 0)
 		(set-current 0)
 	)
 )
 
 (defun startCruise ()
-    (progn
-		(print "enabling cruiseMode")
+	(progn
+		;(print "enabling cruiseMode")
 		(setvar 'currenttoset (get-duty))
 		(setvar 'cruiseMode 1)
 		(setvar 'cruiseReleased 0)
@@ -60,6 +61,7 @@
 					)
 				)
 				(set-current-rel currenttoset 0.015)
+				;(gpio-hold 'pin-tx 1)
 			)
 		)
 
@@ -71,15 +73,9 @@
 				)
 				;(print "in cruiseMode 0 IF")
 				(if (= cruise 0) ;Cruise button is being pressed
-					(progn
-						;(print "in cruise < 1 IF")
-						(if (> throttle 0) ;Throttle is active
-							(progn
-								(print "in throttle > 0 IF")
-								(if (> cruisetimer cruisecooldown) ;Its been at least X seconds since cruise was last disabled
-									(startCruise)
-								)
-							)
+					(if (> throttle 0) ;Throttle is active
+						(if (> cruisetimer cruisecooldown) ;Its been at least X seconds since cruise was last disabled
+							(startCruise)
 						)
 					)
 				)
