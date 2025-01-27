@@ -62,6 +62,7 @@
 				)
 				(set-current-rel currenttoset 0.015)
 				;(gpio-hold 'pin-tx 1)
+				;(app-adc-override 3 1)
 			)
 		)
 
